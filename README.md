@@ -1,10 +1,9 @@
 # DeepWorker
 
-把 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai) 当作 Codex 的本地实现智能体来编排：通过 DSH 的 HTTP/WebSocket 协议，由 Codex 负责规划、创建项目与会话、委派执行、复核审批、验证改动并输出复盘。
+把 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai) 当成 Codex 在本地养的电子黑奴：Codex 负责动脑、开工单、拉群、派活、验收、挑刺，DSH 负责在 HTTP/WebSocket 管道里疯狂打工，最后再由 Codex 写一份“本次事故基本可控”的复盘。
 
-## 一句话目标
+DeepWorker 则是那个把俩人关进同一间机房的纯 Node.js（ESM）包工头：一个 MCP Server + CLI，塞给 Codex 12 把 `dsh_*` 电动扳手，让它直接调度本地 DSH 干活，不点网页、不演赛博木偶戏，主打一个 API 里开会、终端里坐牢。
 
-DeepWorker 是一个纯 Node.js（ESM）的 MCP 服务器 + CLI，让 Codex 通过 12 个 `dsh_*` 工具在本地编排 DSH，而不是用浏览器 UI 自动化。
 
 ## 核心功能
 
