@@ -1,0 +1,18 @@
+# Local environment
+.env
+.env.local
+
+# Logs
+*.log
+
+# Node
+node_modules/
+
+# npm pack output
+*.tgz
+
+# macOS
+.DS_Store
+
+# Scratch space
+work/

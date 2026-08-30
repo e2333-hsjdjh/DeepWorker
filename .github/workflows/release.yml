@@ -1,0 +1,51 @@
+name: release
+
+# Build and publish a GitHub Release (NOT npm) when a `v*` tag is pushed.
+# Produces the .tgz tarball and uploads it as a release asset.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Pack
+        run: npm pack
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TGZ=$(ls deepworker-*.tgz | head -n 1)
+          RELEASE_ID=$(gh release view "${{ github.ref_name }}" --json id --jq .id 2>/dev/null || true)
+          if [ -z "$RELEASE_ID" ]; then
+            gh release create "${{ github.ref_name }}" "$TGZ" \
+              --title "${{ github.ref_name }}" \
+              --generate-notes
+          else
+            gh release upload "${{ github.ref_name }}" "$TGZ" --clobber
+          fi

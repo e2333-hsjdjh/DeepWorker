@@ -1,0 +1,16 @@
+{
+  "name": "deepworker",
+  "displayName": "DeepWorker",
+  "version": "0.1.0",
+  "description": "Use DeepSeek Harness as an implementation agent over its local protocol: plan, create projects and sessions, delegate, review approvals, and verify changes.",
+  "author": "e2333-hsjdjh",
+  "developerName": "e2333-hsjdjh",
+  "license": "MIT",
+  "websiteURL": "https://github.com/e2333-hsjdjh/DeepWorker",
+  "mcp": {
+    "server": {
+      "command": "npx",
+      "args": ["-y", "deepworker", "serve"]
+    }
+  }
+}
