@@ -30,7 +30,7 @@ export async function ownedPid() {
   } catch {
     return null;
   }
-  const pid = Number.parseInt(text, 10);
+  const pid = /^\d+$/.test(text) ? Number(text) : NaN;
   if (!Number.isInteger(pid) || pid <= 0) {
     fs.rmSync(pidFile(), { force: true });
     return null;
@@ -78,26 +78,36 @@ export function supportsNoOpen(timeoutMs = 5000) {
 }
 
 // Compute the argv used to start DSH web. Defaults to exactly ["web"].
-export function webArgv() {
-  if (supportsNoOpen()) return ["web", "--no-open"];
-  return ["web"];
+export function webArgv({ probe = supportsNoOpen } = {}) {
+  const argv = ["web"];
+  if (probe()) argv.push("--no-open");
+  if (port() !== 3080) argv.push("--port", String(port()));
+  return argv;
 }
 
 export async function startWeb() {
   const before = await status();
   if (before.running) return { started: false, ...before };
 
-  fs.mkdirSync(stateDir(), { recursive: true });
+  fs.mkdirSync(stateDir(), { recursive: true, mode: 0o700 });
   const argv = webArgv();
-  const fd = fs.openSync(logFile(), "a");
+  const fd = fs.openSync(logFile(), "a", 0o600);
   const proc = spawn("dsh", argv, {
     stdio: ["ignore", fd, fd],
     detached: true,
   });
   fs.closeSync(fd);
+  try {
+    await new Promise((resolve, reject) => {
+      proc.once("spawn", resolve);
+      proc.once("error", reject);
+    });
+  } catch (error) {
+    return { started: false, argv, error: `无法启动 DSH：${error.message}`, ...(await status()) };
+  }
   proc.unref();
 
-  fs.writeFileSync(pidFile(), String(proc.pid));
+  fs.writeFileSync(pidFile(), String(proc.pid), { mode: 0o600 });
   const deadline = Date.now() + 20000;
   for (;;) {
     if (!(await processAlive(proc.pid))) break;

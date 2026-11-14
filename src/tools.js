@@ -9,6 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { post, respond } from "./rpc.js";
+import { modernApprovals, modernDecision, modernEnabled, modernStatus } from "./modern.js";
 import { startWeb, stopWeb, status } from "./lifecycle.js";
 import { requireExistingDir, validateProjectName, bounded } from "./validate.js";
 
@@ -69,10 +70,17 @@ export function compactHistory(raw, sessionId, maxMessages) {
 async function dsh_create_project(args) {
   const parent = requireExistingDir(args.parent, "parent");
   const name = validateProjectName(args.name);
-  const preset = args.agent_preset ?? "standard";
+  const preset = args.agent_preset ?? (modernEnabled() ? undefined : "standard");
   const title = args.title;
 
-  const created = await post("host.createDirectory", { path: parent, name });
+  let created;
+  if (modernEnabled()) {
+    const projectPath = path.join(parent, name);
+    await fs.promises.mkdir(projectPath);
+    created = { path: projectPath };
+  } else {
+    created = await post("host.createDirectory", { path: parent, name });
+  }
   const workspaceResult = await post("workspace.create", { path: created.path });
   const workspace = workspaceResult.workspace;
   const session = await post("session.create", {
@@ -87,7 +95,7 @@ async function dsh_create_project(args) {
 
 async function dsh_create_session(args) {
   const root = requireExistingDir(args.workspace, "workspace");
-  const preset = args.agent_preset ?? "standard";
+  const preset = args.agent_preset ?? (modernEnabled() ? undefined : "standard");
   const title = args.title;
 
   const workspaceResult = await post("workspace.create", { path: root });
@@ -103,8 +111,7 @@ async function dsh_create_session(args) {
 }
 
 async function dsh_list_sessions() {
-  const workspaces = await post("workspace.list", {});
-  const sessions = await post("session.list", {});
+  const [workspaces, sessions] = await Promise.all([post("workspace.list", {}), post("session.list", {})]);
   return {
     workspaces: (workspaces.items || []).map((item) => ({
       workspaceId: item.workspaceId,
@@ -129,10 +136,10 @@ async function dsh_wait(args, deps) {
   const sessionId = args.session_id;
   const timeoutSec = Math.max(0, Math.min(args.timeout_sec ?? 30, 60));
   const monitor = deps.monitor;
-  monitor.ensure();
+  if (!modernEnabled()) monitor.ensure();
   const deadline = Date.now() + timeoutSec * 1000;
   for (;;) {
-    const pending = monitor.snapshot(sessionId);
+    const pending = modernEnabled() ? await modernApprovals(sessionId) : monitor.snapshot(sessionId);
     if (pending.length) return { state: "approval-required", pendingApprovals: pending };
     const sessions = await post("session.list", {});
     const row = (sessions.items || []).find((item) => item.sessionId === sessionId);
@@ -156,11 +163,13 @@ async function dsh_history(args) {
 }
 
 async function dsh_pending_approvals(args, deps) {
+  if (modernEnabled()) return { items: await modernApprovals(args.session_id) };
   deps.monitor.ensure();
   return { items: deps.monitor.snapshot(args.session_id ?? null) };
 }
 
 async function dsh_decide_approval(args, deps) {
+  if (modernEnabled()) return modernDecision(args.approval_id, args.outcome);
   deps.monitor.ensure();
   const approvalId = args.approval_id;
   const row = deps.monitor
@@ -187,7 +196,9 @@ async function dsh_status(_args, deps) {
   // Include the event-stream view matching the plugin target. Read-only:
   // does not force a connection; a monitor that never started reports
   // connected=false with no error.
-  const stream = deps && deps.monitor ? deps.monitor.status() : { connected: false, lastError: null };
+  const stream = modernEnabled()
+    ? modernStatus()
+    : deps?.monitor?.status() ?? { connected: false, lastError: null };
   return { ...base, eventStream: stream };
 }
 
@@ -218,8 +229,8 @@ const HANDLERS = {
 // the server inject their own for the wait/approval tools.
 export async function dispatch(name, args, deps = {}) {
   const monitor = deps.monitor;
+  if (!hasTool(name)) throw new Error(`unknown tool: ${name}`);
   const handler = HANDLERS[name];
-  if (!handler) throw new Error(`unknown tool: ${name}`);
   return handler(args, { monitor });
 }
 

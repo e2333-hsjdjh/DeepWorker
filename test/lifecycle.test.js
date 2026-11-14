@@ -16,10 +16,19 @@ function tmpState() {
   return dir;
 }
 
-test("webArgv defaults to exactly ['web']", () => {
-  const argv = webArgv();
-  // Assert the default has no --no-open (current build rejects it).
-  assert.deepEqual(argv, ["web"]);
+test("webArgv only passes --no-open to capable runtimes and honors the port", t => {
+  const previous = process.env.DEEPWORKER_PORT;
+  t.after(() => {
+    if (previous === undefined) delete process.env.DEEPWORKER_PORT;
+    else process.env.DEEPWORKER_PORT = previous;
+  });
+  process.env.DEEPWORKER_PORT = "3080";
+  assert.deepEqual(webArgv({ probe: () => false }), ["web"]);
+  assert.deepEqual(webArgv({ probe: () => true }), ["web", "--no-open"]);
+  process.env.DEEPWORKER_PORT = "31987";
+  assert.deepEqual(webArgv({ probe: () => true }), ["web", "--no-open", "--port", "31987"]);
+  process.env.DEEPWORKER_PORT = "31987x";
+  assert.throws(() => webArgv({ probe: () => true }), /integer/);
 });
 
 test("stopWeb refuses when no owned PID is recorded", async () => {

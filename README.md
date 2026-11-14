@@ -88,6 +88,13 @@ npm run pack:dry-run   # 预检 npm 打包内容
 
 插件 manifest（`plugin/deepworker/.codex-plugin/plugin.json`）与技能文档（`plugin/deepworker/skills/orchestrate-dsh/SKILL.md`）也一并打包。
 
+## 接入 DSH 0.2.2
+
+启动 `dsh web --no-open`，将启动链接中的 `token` 通过环境变量
+`DEEPWORKER_DSH_TOKEN` 传给 DeepWorker。若 DSH 使用其他端口，同时设置
+`DEEPWORKER_PORT`。DeepWorker 通过本地接口交换 API Cookie，并在单独的连接上接收审批。
+旧版 DSH 继续使用原来的接入方式。
+
 ## 12 工具一览
 
 | 工具 | 作用 | 副作用 |

@@ -7,6 +7,25 @@
 import crypto from "node:crypto";
 
 import { baseUrl } from "./config.js";
+import { modernEnabled, modernRequest, workspaceBaseline } from "./modern.js";
+
+async function modernPost(method, payload, timeoutMs) {
+  switch (method) {
+    case "host.describe": return modernRequest("settings/describe", {}, timeoutMs);
+    case "workspace.list": return workspaceBaseline();
+    case "session.list": return modernRequest("session/list", { _request: payload }, timeoutMs);
+    case "session.prompt":
+      return modernRequest("session/prompt", { request: { ...payload, requestId: crypto.randomUUID() } }, timeoutMs);
+    case "session.history": {
+      const { sessionId, maxMessages } = payload;
+      const page = await modernRequest("session/page", {
+        request: { address: { kind: "session", sessionId }, maxMessages },
+      }, timeoutMs);
+      return { ...page, events: page.records };
+    }
+    default: return modernRequest(method.replace(".", "/"), { request: payload }, timeoutMs);
+  }
+}
 
 export const REQUEST_TIMEOUT_MS = 35000;
 export const RESPOND_TIMEOUT_MS = 15000;
@@ -26,12 +45,14 @@ function jsonBody(message, timeoutMs) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(message),
     signal: controller.signal,
+    redirect: "error",
   };
   return { req, timer, controller };
 }
 
 // POST a client-request to /api/<method> and return result.value.
 export async function post(method, payload, { timeoutMs = REQUEST_TIMEOUT_MS, http = fetch } = {}) {
+  if (modernEnabled()) return modernPost(method, payload, timeoutMs);
   const rpcId = crypto.randomUUID();
   const body = { type: "client-request", rpcId, method, payload };
   const { req, timer } = jsonBody(body, timeoutMs);

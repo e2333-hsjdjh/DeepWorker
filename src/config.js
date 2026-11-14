@@ -8,12 +8,14 @@ import os from "node:os";
 import path from "node:path";
 
 export function host() {
-  return process.env.DEEPWORKER_HOST || "127.0.0.1";
+  const value = process.env.DEEPWORKER_HOST || "127.0.0.1";
+  if (value !== "127.0.0.1") throw new Error("DEEPWORKER_HOST 必须为 127.0.0.1");
+  return value;
 }
 
 export function port() {
   const raw = process.env.DEEPWORKER_PORT || "3080";
-  const num = Number.parseInt(raw, 10);
+  const num = /^\d+$/.test(raw) ? Number(raw) : NaN;
   if (!Number.isInteger(num) || num < 1 || num > 65535) {
     throw new Error(`DEEPWORKER_PORT must be an integer in 1..65535, got: ${raw}`);
   }

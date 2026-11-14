@@ -3,6 +3,7 @@
 
 import net from "node:net";
 import { host, port, baseUrl, wsUrl } from "./config.js";
+import { closeModern, modernEnabled, modernRequest, modernStatus } from "./modern.js";
 import { VERSION } from "./version.js";
 
 const HTTP = "http";
@@ -99,7 +100,20 @@ export async function runDoctor() {
   const portOpen = await checkPort();
   let api = { ok: false, kind: "api", url: `${baseUrl()}/api/host.describe` };
   let ws = { ok: false, kind: "websocket", url: wsUrl() };
-  if (portOpen) {
+  if (portOpen && modernEnabled()) {
+    api.url = `${baseUrl()}/api/settings/describe`;
+    ws.url = `${baseUrl().replace("http:", "ws:")}/api/remote.mux`;
+    try {
+      await modernRequest("settings/describe", {}, 3500);
+      api.ok = true;
+      api.responded = true;
+    } catch (error) {
+      api.error = error.message;
+    } finally {
+      ws.connected = ws.ok = modernStatus().connected;
+      closeModern();
+    }
+  } else if (portOpen) {
     [api, ws] = await Promise.all([checkApi(), checkWs()]);
   } else {
     api.error = "port not listening";

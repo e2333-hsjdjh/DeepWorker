@@ -5,6 +5,7 @@
 //   started; we also handle a streamed fallback for non-TTY/file input).
 // - Notifications (no "id") produce no response.
 
+import { closeModern } from "./modern.js";
 import { EventMonitor } from "./events.js";
 import { dispatch } from "./tools.js";
 import { TOOLS } from "./tools-schema.js";
@@ -107,16 +108,19 @@ export async function serve(options = {}) {
   });
   process.stdin.on("end", () => {
     if (buffer.trim()) onMessage(buffer);
+    closeModern();
     monitor.close();
     process.exit(0);
   });
   process.stdin.resume();
 
   process.on("SIGINT", () => {
+    closeModern();
     monitor.close();
     process.exit(0);
   });
   process.on("SIGTERM", () => {
+    closeModern();
     monitor.close();
     process.exit(0);
   });
