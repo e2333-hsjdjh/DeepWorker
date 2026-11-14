@@ -1,9 +1,26 @@
 // DSH 0.2.2 Remote transport. An isolated API peer owns one mux socket.
 import { randomUUID } from "node:crypto";
 import WebSocket from "ws";
-import { baseUrl } from "./config.js";
+import { readFileSync } from "node:fs";
+import { baseUrl, logFile } from "./config.js";
+import { ownedProcess } from "./ownership.js";
 
-export const modernEnabled = () => Boolean(process.env.DEEPWORKER_DSH_TOKEN);
+function launchToken() {
+  const external = process.env.DEEPWORKER_DSH_TOKEN;
+  if (external) return external;
+  if (!ownedProcess()) return undefined;
+  try {
+    const log = readFileSync(logFile(), "utf8");
+    const entry = log.match(/^dsh web: (http:\/\/[^\s]+)$/m)?.[1];
+    if (!entry) return undefined;
+    const url = new URL(entry);
+    if (url.origin === baseUrl()) return url.searchParams.get("token") ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export const modernEnabled = () => Boolean(current?.ws.readyState === WebSocket.OPEN || launchToken());
 
 let current;
 let connecting;
@@ -32,7 +49,9 @@ async function rpc(peer, method, args, timeoutMs = 35000) {
 
 async function connect() {
   const url = new URL("/connect", baseUrl());
-  url.searchParams.set("token", process.env.DEEPWORKER_DSH_TOKEN);
+  const token = launchToken();
+  if (!token) throw new Error("缺少 DSH 启动令牌");
+  url.searchParams.set("token", token);
   url.searchParams.set("interactions", "answer");
   const response = await fetch(url, {
     headers: { accept: "application/json" }, redirect: "manual", signal: AbortSignal.timeout(5000),
@@ -62,7 +81,7 @@ async function connect() {
       if (event.type === "waterfall" && event.event === "approval/request") {
         peer.pending.set(event.eventId, {
           approvalId: event.eventId, sessionId: event.agentId,
-          tool: event.request.toolName, reason: event.request.displayReason ?? event.request.reason,
+          tool: event.request.toolName, callId: event.request.callId, reason: event.request.displayReason ?? event.request.reason,
         });
       } else if (event.type === "waterfall") {
         rpc(peer, "$events/result", {

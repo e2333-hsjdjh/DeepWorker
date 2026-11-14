@@ -1,6 +1,7 @@
 // CLI: help, version, unknown-command non-zero exit. Serve is exercised
 // separately via the protocol tests (it blocks on stdio).
 
+import fs from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -25,7 +26,8 @@ test("--help exits 0 and prints DeepWorker usage", () => {
 test("--version prints semver and exits 0", () => {
   const res = run("--version");
   assert.equal(res.status, 0);
-  assert.match(res.stdout.trim(), /^0\.1\.0$/);
+  const manifest = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+  assert.equal(res.stdout.trim(), manifest.version);
 });
 
 test("unknown command exits non-zero", () => {

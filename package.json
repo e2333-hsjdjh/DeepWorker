@@ -1,6 +1,6 @@
 {
   "name": "deepworker",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "DeepWorker: Codex orchestrates DeepSeek Harness (DSH) over its local HTTP/WebSocket protocol. Exposes 12 MCP tools over stdio and a doctor CLI.",
   "license": "MIT",
   "type": "module",
@@ -26,13 +26,13 @@
   "files": [
     "bin",
     "src",
-    "plugin",
+    "plugin/deepworker",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"
   ],
   "scripts": {
-    "test": "node --test",
+    "test": "node --test test/*.test.js",
     "lint": "node scripts/check.js",
     "pack:dry-run": "npm pack --dry-run"
   },

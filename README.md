@@ -88,12 +88,18 @@ npm run pack:dry-run   # 预检 npm 打包内容
 
 插件 manifest（`plugin/deepworker/.codex-plugin/plugin.json`）与技能文档（`plugin/deepworker/skills/orchestrate-dsh/SKILL.md`）也一并打包。
 
+## Harness 本地任务插件
+
+[`plugin/harness-task-queue`](plugin/harness-task-queue) 是独立的 npm 插件包。它让 Harness 保存任务说明、验收条件和状态，并能跨会话读取。插件指南包含开发环境、独立测试环境和打包命令。
+
 ## 接入 DSH 0.2.2
 
-启动 `dsh web --no-open`，将启动链接中的 `token` 通过环境变量
-`DEEPWORKER_DSH_TOKEN` 传给 DeepWorker。若 DSH 使用其他端口，同时设置
-`DEEPWORKER_PORT`。DeepWorker 通过本地接口交换 API Cookie，并在单独的连接上接收审批。
-旧版 DSH 继续使用原来的接入方式。
+- **由 DeepWorker 启动。** PATH 中有兼容的 `dsh` 时，调用 `dsh_start`。DeepWorker 从它自己启动的进程日志获取本机令牌，重启后会连接新的令牌。
+- **连接独立运行的 Harness。** 将 `dsh web --no-open` 打印的本地链接中的 `token` 赋给 DeepWorker 进程的 `DEEPWORKER_DSH_TOKEN` 环境变量。重启独立 Harness 后更新令牌。
+- 如果使用自定义端口，设置 `DEEPWORKER_PORT`。开发和测试分别使用不同的 `DSH_HOME`、`DEEPWORKER_STATE_DIR` 和端口。
+
+DeepWorker 通过本地接口交换 API Cookie，并在单独的连接上接收审批。
+旧版 DSH 继续使用原来的接入方式。升级后，旧版仅包含 PID 的记录不能证明进程归属，可通过原启动方式先停止该进程。
 
 ## 12 工具一览
 
@@ -126,6 +132,7 @@ npm run pack:dry-run   # 预检 npm 打包内容
 | --- | --- | --- |
 | `DEEPWORKER_HOST` | `127.0.0.1` | DSH 主机 |
 | `DEEPWORKER_PORT` | `3080` | DSH 端口 |
+| `DEEPWORKER_DSH_TOKEN` | 空 | 连接独立启动的 DSH 0.2.2 时使用的本机令牌 |
 | `DEEPWORKER_STATE_DIR` | `~/.dsh/deepworker` | 进程簿记目录（`web.pid`/`web.log`） |
 
 ## 故障排查

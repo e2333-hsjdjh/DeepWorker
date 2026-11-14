@@ -29,7 +29,7 @@ export class EventMonitor {
 
   // Idempotent: starts only once; safe to call from every tool.
   ensure() {
-    if (this.ws || this.closed) return;
+    if (this.ws || this.timer || this.closed) return;
     this._connect();
   }
 
@@ -64,6 +64,7 @@ export class EventMonitor {
     client.on("close", () => {
       this.connected = false;
       if (this.ws === client) this.ws = null;
+      this.pending.clear();
       this._scheduleReconnect();
     });
 

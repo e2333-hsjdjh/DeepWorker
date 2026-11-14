@@ -15,6 +15,12 @@
 - `node:test` 测试套件（本地 mock server）。
 - CI 与 GitHub Release workflow（`.tgz` 资产，不自动 npm publish）。
 
+## 0.2.0
+
+- 支持 DSH 0.2.2 的本地鉴权、会话管理、审批和取消。
+- 受控启动支持自定义端口，重启后重新读取令牌，停止前检查进程启动身份。
+- 增加本地任务插件，以及经由 MCP stdio 和真实 Harness 执行的无付费回归测试。
+
 ## 0.1.0
 
 - 首个发布版本。

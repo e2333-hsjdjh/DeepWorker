@@ -20,3 +20,24 @@ jobs:
       - run: npm test
       - run: npm run lint
       - run: npm run pack:dry-run
+
+  harness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            plugin/harness-task-queue/package-lock.json
+      - run: npm ci
+      - run: npm ci
+        working-directory: plugin/harness-task-queue
+      - run: npm test
+        working-directory: plugin/harness-task-queue
+      - run: npm run test:deepworker
+        working-directory: plugin/harness-task-queue
+        env:
+          DEEPWORKER_CHECKOUT: ../..

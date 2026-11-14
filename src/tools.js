@@ -136,10 +136,10 @@ async function dsh_wait(args, deps) {
   const sessionId = args.session_id;
   const timeoutSec = Math.max(0, Math.min(args.timeout_sec ?? 30, 60));
   const monitor = deps.monitor;
-  if (!modernEnabled()) monitor.ensure();
+  if (!modernEnabled()) monitor?.ensure();
   const deadline = Date.now() + timeoutSec * 1000;
   for (;;) {
-    const pending = modernEnabled() ? await modernApprovals(sessionId) : monitor.snapshot(sessionId);
+    const pending = modernEnabled() ? await modernApprovals(sessionId) : monitor?.snapshot(sessionId) ?? [];
     if (pending.length) return { state: "approval-required", pendingApprovals: pending };
     const sessions = await post("session.list", {});
     const row = (sessions.items || []).find((item) => item.sessionId === sessionId);
@@ -149,7 +149,7 @@ async function dsh_wait(args, deps) {
       return { state: "idle", session: row, history };
     }
     if (Date.now() >= deadline) {
-      return { state: "running", session: row, recentEvents: monitor.recent(sessionId, 50) };
+      return { state: "running", session: row, recentEvents: monitor?.recent(sessionId, 50) ?? [] };
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
@@ -169,6 +169,7 @@ async function dsh_pending_approvals(args, deps) {
 }
 
 async function dsh_decide_approval(args, deps) {
+  if (!["allowed-once", "rejected"].includes(args.outcome)) throw new Error("无效的审批结果");
   if (modernEnabled()) return modernDecision(args.approval_id, args.outcome);
   deps.monitor.ensure();
   const approvalId = args.approval_id;

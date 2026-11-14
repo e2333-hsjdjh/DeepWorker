@@ -1,0 +1,6 @@
+- id: session-title
+  disabled: false
+
+- insert:
+    - id: test-approval
+      name: ./fixture-approval.js

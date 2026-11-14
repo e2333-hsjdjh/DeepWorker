@@ -1,0 +1,3 @@
+- insert:
+    - id: local-task-queue
+      name: ../../src/plugin.js

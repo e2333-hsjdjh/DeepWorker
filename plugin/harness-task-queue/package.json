@@ -1,0 +1,30 @@
+{
+  "name": "dsh-local-task-queue",
+  "version": "0.2.0",
+  "description": "Local persistent task queue for DeepSeek Harness",
+  "type": "module",
+  "main": "./src/plugin.js",
+  "exports": {
+    ".": "./src/plugin.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": ["src", "cordis.patch.yml"],
+  "keywords": ["dsh-plugin", "deepseek-harness", "task-queue"],
+  "engines": { "node": ">=24.9.0", "dsh": "0.2.2-rc.3" },
+  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": "0.2.2-rc.3"
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-llm": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-tools": "0.2.2-rc.3",
+    "pnpm": "10.34.4"
+  },
+  "scripts": {
+    "test:deepworker": "node --test test/deepworker.test.js",
+    "dev": "node scripts/dev.js",
+    "test": "node --test test/queue.test.js test/harness.test.js"
+  }
+}

@@ -102,13 +102,14 @@ export async function respond(rpcId, value, { timeoutMs = RESPOND_TIMEOUT_MS, ht
     clearTimeout(timer);
     throw new DshApiError(`DSH API respond failed: ${err.message}`);
   }
-  clearTimeout(timer);
-
-  let envelope;
   try {
-    envelope = await response.json();
-  } catch {
-    return {};
+    if (!response.ok) throw new DshApiError(`DSH API HTTP ${response.status} for respond`);
+    const envelope = await response.json();
+    if (envelope?.result?.ok === false) {
+      throw new DshApiError(`DSH approval failed: ${envelope.result.error?.message ?? "unknown error"}`);
+    }
+    return envelope;
+  } finally {
+    clearTimeout(timer);
   }
-  return envelope;
 }

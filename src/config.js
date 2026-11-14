@@ -1,8 +1,6 @@
 // DeepWorker — runtime configuration resolved from environment.
 //
-// DeepWorker only ever talks to a local DSH protocol host. Override the
-// host/port only with an explicit reason; the defaults keep everything pinned
-// to 127.0.0.1:3080.
+// DeepWorker connects to a loopback DSH host on the configured port.
 
 import os from "node:os";
 import path from "node:path";

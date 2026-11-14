@@ -46,8 +46,12 @@ test("ownedPid returns null when pid file is absent or invalid", async () => {
   assert.equal(await ownedPid(), null);
   fs.writeFileSync(path.join(dir, "web.pid"), "not-a-number");
   assert.equal(await ownedPid(), null);
-  // Invalid pid file is cleaned up.
-  assert.equal(fs.existsSync(path.join(dir, "web.pid")), false);
+  fs.writeFileSync(path.join(dir, "web.pid"), String(process.pid));
+  assert.equal(await ownedPid(), null, "a live PID without process identity is not owned");
+  fs.writeFileSync(path.join(dir, "web.pid"), JSON.stringify({
+    pid: process.pid, identity: "stale start time", port: 63999,
+  }));
+  assert.equal(await ownedPid(), null, "a reused PID is not owned");
   fs.rmSync(dir, { recursive: true, force: true });
 });
 

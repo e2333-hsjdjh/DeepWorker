@@ -12,6 +12,7 @@ import net from "node:net";
 import path from "node:path";
 
 import { host, port, stateDir, pidFile, logFile } from "./config.js";
+import { ownedProcess, processIdentity } from "./ownership.js";
 
 export async function processAlive(pid) {
   if (!Number.isInteger(pid) || pid <= 0) return false;
@@ -24,20 +25,7 @@ export async function processAlive(pid) {
 }
 
 export async function ownedPid() {
-  let text;
-  try {
-    text = fs.readFileSync(pidFile(), "utf8").trim();
-  } catch {
-    return null;
-  }
-  const pid = /^\d+$/.test(text) ? Number(text) : NaN;
-  if (!Number.isInteger(pid) || pid <= 0) {
-    fs.rmSync(pidFile(), { force: true });
-    return null;
-  }
-  if (await processAlive(pid)) return pid;
-  fs.rmSync(pidFile(), { force: true });
-  return null;
+  return ownedProcess()?.pid ?? null;
 }
 
 // Check whether something is listening on the configured host/port.
@@ -85,13 +73,21 @@ export function webArgv({ probe = supportsNoOpen } = {}) {
   return argv;
 }
 
-export async function startWeb() {
+let starting;
+
+export function startWeb() {
+  starting ??= launchWeb().finally(() => { starting = undefined; });
+  return starting;
+}
+
+async function launchWeb() {
   const before = await status();
-  if (before.running) return { started: false, ...before };
+  if (before.running || before.managedByPlugin) return { started: false, ...before };
 
   fs.mkdirSync(stateDir(), { recursive: true, mode: 0o700 });
   const argv = webArgv();
-  const fd = fs.openSync(logFile(), "a", 0o600);
+  const fd = fs.openSync(logFile(), fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_TRUNC | fs.constants.O_NOFOLLOW, 0o600);
+  fs.fchmodSync(fd, 0o600);
   const proc = spawn("dsh", argv, {
     stdio: ["ignore", fd, fd],
     detached: true,
@@ -107,12 +103,18 @@ export async function startWeb() {
   }
   proc.unref();
 
-  fs.writeFileSync(pidFile(), String(proc.pid), { mode: 0o600 });
+  const identity = processIdentity(proc.pid);
+  if (!identity) {
+    proc.kill("SIGTERM");
+    return { started: false, argv, error: "无法确认 DSH 进程身份", ...(await status()) };
+  }
+  fs.writeFileSync(pidFile(), JSON.stringify({ pid: proc.pid, identity, port: port() }), { mode: 0o600 });
   const deadline = Date.now() + 20000;
   for (;;) {
     if (!(await processAlive(proc.pid))) break;
     if (await portOpen()) {
-      return { started: true, argv, ...(await status()) };
+      const ready = await status();
+      if (ready.api && ready.managedByPlugin) return { started: true, argv, ...ready };
     }
     if (Date.now() >= deadline) break;
     await sleep(250);
@@ -135,6 +137,8 @@ export async function stopWeb() {
       ...(await status()),
     };
   }
+
+  if (await ownedPid() !== pid) return { stopped: false, ...(await status()) };
 
   // Terminate the whole process group we created (start_new_session/detached).
   try {

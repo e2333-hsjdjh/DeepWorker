@@ -22,14 +22,14 @@ export const TOOLS = [
   {
     name: "dsh_create_project",
     description:
-      "Create one project directory through DSH Host, register it as a workspace, and create a new DSH session.",
+      "Create one project directory locally, register it as a workspace, and create a new DSH session.",
     inputSchema: {
       type: "object",
       required: ["parent", "name"],
       properties: {
         parent: { type: "string" },
         name: { type: "string" },
-        agent_preset: { type: "string", default: "standard" },
+        agent_preset: { type: "string" },
         title: { type: "string" },
       },
       additionalProperties: false,
@@ -43,7 +43,7 @@ export const TOOLS = [
       required: ["workspace"],
       properties: {
         workspace: { type: "string" },
-        agent_preset: { type: "string", default: "standard" },
+        agent_preset: { type: "string" },
         title: { type: "string" },
       },
       additionalProperties: false,
